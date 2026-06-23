@@ -26,9 +26,7 @@ class _SignInPageState extends State<SignInPage> {
   Widget build(BuildContext context) {
     return BlocConsumer<SignInFormBloc, SignInFormState>(
       listener: (context, state) {
-        if (state.state == RequestState.loaded) {
-         
-        }
+        if (state.state == RequestState.loaded) {}
         if (state.state == RequestState.error) {
           showToast(
               msg: state.message,
@@ -71,7 +69,7 @@ class _SignInPageState extends State<SignInPage> {
                               _obscureText = !_obscureText;
                             });
                           },
-                          icon: Icon(
+                          icon: FaIcon(
                             _obscureText
                                 ? FontAwesomeIcons.eye
                                 : FontAwesomeIcons.eyeSlash,
@@ -86,7 +84,7 @@ class _SignInPageState extends State<SignInPage> {
                       const SizedBox(height: SPACE25),
                       _buildForgotPassword(context),
                       const SizedBox(height: SPACE25),
-                   CustomElevatedButton(
+                      CustomElevatedButton(
                         onTap: () {
                           if (_formKey.currentState!.validate()) {
                             context
@@ -94,8 +92,9 @@ class _SignInPageState extends State<SignInPage> {
                                 .add(const SignInFormEvent.signInWithEmail());
                           }
                         },
-                        isLoading:
-                            (state.state == RequestState.loading) ? true : false,
+                        isLoading: (state.state == RequestState.loading)
+                            ? true
+                            : false,
                         labelLoading: 'Signing...',
                         label: 'Sign In',
                       ),
@@ -201,7 +200,7 @@ class _SignInPageState extends State<SignInPage> {
             color: theme.primaryColor.withOpacity(0.8),
             borderRadius: BorderRadius.circular(50),
           ),
-          child: const Icon(FontAwesomeIcons.google,
+          child: const FaIcon(FontAwesomeIcons.google,
               size: 30, color: Colors.white),
         ),
         Container(
@@ -211,7 +210,7 @@ class _SignInPageState extends State<SignInPage> {
             color: theme.primaryColor.withOpacity(0.8),
             borderRadius: BorderRadius.circular(50),
           ),
-          child: const Icon(
+          child: const FaIcon(
             FontAwesomeIcons.apple,
             size: 30,
             color: Colors.white,
