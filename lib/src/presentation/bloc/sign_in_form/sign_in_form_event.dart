@@ -4,6 +4,7 @@ part of 'sign_in_form_bloc.dart';
 class SignInFormEvent with _$SignInFormEvent {
    const factory SignInFormEvent.initial() = _Initial;
   const factory SignInFormEvent.signInWithEmail() = _SignInWithEmail;
+  const factory SignInFormEvent.signInWithGoogle() = _SignInWithGoogle;
 
   // TextField events
   const factory SignInFormEvent.emailOnChanged(

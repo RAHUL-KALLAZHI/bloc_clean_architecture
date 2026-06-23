@@ -4,12 +4,14 @@ import 'package:bloc_clean_architecture/src/comman/toast.dart';
 import 'package:bloc_clean_architecture/src/presentation/bloc/sign_in_form/sign_in_form_bloc.dart';
 import 'package:bloc_clean_architecture/src/presentation/widget/custom_elevated_button.dart';
 import 'package:bloc_clean_architecture/src/presentation/widget/custom_text_form_field.dart';
-import 'package:bloc_clean_architecture/src/utilities/debouncer.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:bloc_clean_architecture/src/comman/routes.dart';
+import 'package:bloc_clean_architecture/src/presentation/bloc/authenticator_watcher/authenticator_watcher_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({Key? key}) : super(key: key);
@@ -26,7 +28,12 @@ class _SignInPageState extends State<SignInPage> {
   Widget build(BuildContext context) {
     return BlocConsumer<SignInFormBloc, SignInFormState>(
       listener: (context, state) {
-        if (state.state == RequestState.loaded) {}
+        if (state.state == RequestState.loaded) {
+          context.read<AuthenticatorWatcherBloc>().add(
+                const AuthenticatorWatcherEvent.authCheckRequest(),
+              );
+          context.goNamed(AppRoutes.DASHBOARD_ROUTE_NAME);
+        }
         if (state.state == RequestState.error) {
           showToast(
               msg: state.message,
@@ -193,15 +200,22 @@ class _SignInPageState extends State<SignInPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          margin: const EdgeInsets.symmetric(horizontal: 5),
-          decoration: BoxDecoration(
-            color: theme.primaryColor.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(50),
+        GestureDetector(
+          onTap: () {
+            context
+                .read<SignInFormBloc>()
+                .add(const SignInFormEvent.signInWithGoogle());
+          },
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            margin: const EdgeInsets.symmetric(horizontal: 5),
+            decoration: BoxDecoration(
+              color: theme.primaryColor.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: const FaIcon(FontAwesomeIcons.google,
+                size: 30, color: Colors.white),
           ),
-          child: const FaIcon(FontAwesomeIcons.google,
-              size: 30, color: Colors.white),
         ),
         Container(
           padding: const EdgeInsets.all(10),

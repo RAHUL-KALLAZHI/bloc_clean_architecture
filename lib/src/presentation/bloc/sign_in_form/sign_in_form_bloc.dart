@@ -1,5 +1,6 @@
 import 'package:bloc_clean_architecture/src/comman/enum.dart';
 import 'package:bloc_clean_architecture/src/domain/usecase/login.dart';
+import 'package:bloc_clean_architecture/src/domain/usecase/sign_in_with_google.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -8,7 +9,7 @@ part 'sign_in_form_state.dart';
 part 'sign_in_form_bloc.freezed.dart';
 
 class SignInFormBloc extends Bloc<SignInFormEvent, SignInFormState> {
-  SignInFormBloc(this._signInWithEmail) : super(SignInFormState.initial()) {
+  SignInFormBloc(this._signInWithEmail, this._signInWithGoogle) : super(SignInFormState.initial()) {
     on<SignInFormEvent>(
       (event, emit) async {
         await event.map(
@@ -31,6 +32,19 @@ class SignInFormBloc extends Bloc<SignInFormEvent, SignInFormState> {
                     ),
                 (_) => emit(state.copyWith(state: RequestState.loaded)));
           },
+          signInWithGoogle: (_) async {
+            emit(state.copyWith(state: RequestState.loading));
+            final result = await _signInWithGoogle.execute();
+            result.fold(
+              (f) => emit(
+                state.copyWith(
+                  state: RequestState.error,
+                  message: f.message,
+                ),
+              ),
+              (_) => emit(state.copyWith(state: RequestState.loaded)),
+            );
+          },
           emailOnChanged: (event) {
             emit(state.copyWith(email: event.email, state: RequestState.empty));
           },
@@ -44,4 +58,5 @@ class SignInFormBloc extends Bloc<SignInFormEvent, SignInFormState> {
   }
 
   final SignIn _signInWithEmail;
+  final SignInWithGoogle _signInWithGoogle;
 }

@@ -2,6 +2,7 @@ import 'package:bloc_clean_architecture/src/data/datasource/authentication_remot
 import 'package:bloc_clean_architecture/src/data/repository/authentication_repository_impl.dart';
 import 'package:bloc_clean_architecture/src/domain/repositories/autentication_repository.dart';
 import 'package:bloc_clean_architecture/src/domain/usecase/login.dart';
+import 'package:bloc_clean_architecture/src/domain/usecase/sign_in_with_google.dart';
 import 'package:bloc_clean_architecture/src/presentation/bloc/authenticator_watcher/authenticator_watcher_bloc.dart';
 import 'package:bloc_clean_architecture/src/presentation/bloc/sign_in_form/sign_in_form_bloc.dart';
 import 'package:bloc_clean_architecture/src/presentation/cubit/theme/theme_cubit.dart';
@@ -28,13 +29,18 @@ void init() {
     () => signIn,
   );
 
+  final signInWithGoogle = SignInWithGoogle(locator());
+  locator.registerLazySingleton(
+    () => signInWithGoogle,
+  );
+
   //TODO:  BLoCs
    final authenticatorWatcherBloc = AuthenticatorWatcherBloc();
   locator.registerLazySingleton(
     () => authenticatorWatcherBloc,
   );
 
-  final signInFormBloc = SignInFormBloc(locator());
+  final signInFormBloc = SignInFormBloc(locator(), locator());
   locator.registerLazySingleton(
     () => signInFormBloc,
   );

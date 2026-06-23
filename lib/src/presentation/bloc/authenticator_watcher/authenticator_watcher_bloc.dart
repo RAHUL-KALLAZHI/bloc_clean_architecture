@@ -1,7 +1,9 @@
 import 'package:bloc_clean_architecture/main.dart';
 import 'package:bloc_clean_architecture/src/comman/constant.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 part 'authenticator_watcher_event.dart';
 part 'authenticator_watcher_state.dart';
@@ -31,7 +33,11 @@ class AuthenticatorWatcherBloc
         signOut: (_) async {
           emit(const AuthenticatorWatcherState.authenticating());
           final prefs = await SharedPreferences.getInstance();
-          prefs.remove(ACCESS_TOKEN);
+          await prefs.remove(ACCESS_TOKEN);
+          try {
+            await FirebaseAuth.instance.signOut();
+            await GoogleSignIn.instance.signOut();
+          } catch (_) {}
           emit(const AuthenticatorWatcherState.unauthenticated());
         },
       );

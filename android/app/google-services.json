@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "281322148820",
+    "firebase_url": "https://getwell-ab06b-default-rtdb.firebaseio.com",
+    "project_id": "getwell-ab06b",
+    "storage_bucket": "getwell-ab06b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:281322148820:android:5db75e60b533d55c647c41",
+        "android_client_info": {
+          "package_name": "com.rahul.jobhunt.bloc_clean_architecture"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "281322148820-qvsugik0kljtb04t9p3lovr4t1ht95a5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rahul.jobhunt.bloc_clean_architecture",
+            "certificate_hash": "8b10025a06f5bce378be0d40000daac9144ac570"
+          }
+        },
+        {
+          "client_id": "281322148820-qd9ol105shh111k0labd6a1c5plo6kpr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDf21qeWlL-1xcsKt4ptmBoCFsYsoxP3xA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "281322148820-nioi90a2k4da0g7hvfhqoeetqhtnn1jc.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "281322148820-3ch9a4fsnot091eft8omeu6uurgogihh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.rahul.jobhunt.blocCleanArchitecture"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
