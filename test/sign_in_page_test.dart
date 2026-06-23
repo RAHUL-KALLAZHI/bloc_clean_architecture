@@ -59,18 +59,30 @@ void main() {
 
     // Act
     await tester.pumpWidget(createWidgetUnderTest());
-    await tester.tap(find.byIcon(FontAwesomeIcons.eye));
+
+    final eyeIconFinder = find.descendant(
+      of: find.byType(IconButton),
+      matching: find.byType(FaIcon),
+    );
+
+    // Verify it starts with eye icon
+    final firstFaIcon = tester.widget<FaIcon>(eyeIconFinder);
+    expect(firstFaIcon.icon, FontAwesomeIcons.eye.data);
+
+    await tester.tap(eyeIconFinder);
     await tester.pump();
 
     // Assert
-    expect(find.byIcon(FontAwesomeIcons.eyeSlash), findsOneWidget);
+    final secondFaIcon = tester.widget<FaIcon>(eyeIconFinder);
+    expect(secondFaIcon.icon, FontAwesomeIcons.eyeSlash.data);
 
     // Act
-    await tester.tap(find.byIcon(FontAwesomeIcons.eyeSlash));
+    await tester.tap(eyeIconFinder);
     await tester.pump();
 
     // Assert
-    expect(find.byIcon(FontAwesomeIcons.eye), findsOneWidget);
+    final thirdFaIcon = tester.widget<FaIcon>(eyeIconFinder);
+    expect(thirdFaIcon.icon, FontAwesomeIcons.eye.data);
   });
 
   testWidgets('Form validation and sign in event trigger', (WidgetTester tester) async {
@@ -81,6 +93,7 @@ void main() {
     await tester.pumpWidget(createWidgetUnderTest());
     await tester.enterText(find.byType(CustomTextFormField).first, 'test@test.com');
     await tester.enterText(find.byType(CustomTextFormField).last, 'password');
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.tap(find.text('Sign In'));
     await tester.pump();
 

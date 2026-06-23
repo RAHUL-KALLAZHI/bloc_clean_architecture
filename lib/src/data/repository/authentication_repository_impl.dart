@@ -32,4 +32,22 @@ class AuthenticationRepositoryImpl extends AuthenticationRepository {
       );
     }
   }
+
+  @override
+  Future<Either<Failure, void>> signInWithGoogle() async {
+    try {
+      final result = await dataSource.signInWithGoogle();
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } on SocketException {
+      return const Left(
+        ConnectionFailure('No internet connection'),
+      );
+    } catch (e) {
+      return Left(
+        ServerFailure(e.toString()),
+      );
+    }
+  }
 }
