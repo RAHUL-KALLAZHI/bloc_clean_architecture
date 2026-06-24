@@ -1,9 +1,18 @@
 import 'package:bloc_clean_architecture/src/comman/routes.dart';
+import 'package:bloc_clean_architecture/src/comman/enum.dart';
+import 'package:bloc_clean_architecture/src/domain/entities/company.dart';
+import 'package:bloc_clean_architecture/src/domain/entities/job.dart';
 import 'package:bloc_clean_architecture/src/presentation/bloc/authenticator_watcher/authenticator_watcher_bloc.dart';
+import 'package:bloc_clean_architecture/src/presentation/bloc/dashboard/dashboard_bloc.dart';
+import 'package:bloc_clean_architecture/src/utilities/logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DashBoardScreen extends StatefulWidget {
   const DashBoardScreen({super.key});
@@ -13,38 +22,755 @@ class DashBoardScreen extends StatefulWidget {
 }
 
 class _DashBoardScreenState extends State<DashBoardScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  Company? _selectedCompany;
+
   @override
-  Widget build(BuildContext context) {
-    return BlocListener<AuthenticatorWatcherBloc, AuthenticatorWatcherState>(
-      listener: (context, state) {
-        state.maybeMap(
-          orElse: () {},
-          unauthenticated: (_) {
-            context.goNamed(AppRoutes.LOGIN_ROUTE_NAME);
-          },
+  void initState() {
+    super.initState();
+    context.read<DashboardBloc>().add(const DashboardEvent.fetchData());
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  String _formatTimestamp(int timestamp) {
+    if (timestamp <= 0) return 'Unknown';
+    final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _showJobDetails(BuildContext context, Job job, String companyName) {
+    final theme = Theme.of(context);
+    showModalBottomSheet(
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: theme.disabledColor.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Text(
+                  job.title,
+                  style: theme.textTheme.displayMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  companyName,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'Updated on ${_formatTimestamp(job.lastUpdated)}',
+                  style: theme.textTheme.titleSmall,
+                ),
+                const Divider(height: 30),
+                Text(
+                  'Job Description',
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  job.description,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 25),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.language),
+                        label: const Text('Open Job Link'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.disabledColor.withOpacity(0.2),
+                          foregroundColor: theme.textTheme.bodyLarge?.color,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () async {
+                          if (job.jobUrl.isNotEmpty) {
+                            var urlString = job.jobUrl.trim();
+                            if (!urlString.startsWith('http://') &&
+                                !urlString.startsWith('https://')) {
+                              urlString = 'https://$urlString';
+                            }
+                            final uri = Uri.parse(urlString);
+                            try {
+                              final launched = await launchUrl(
+                                uri,
+                                mode: LaunchMode.inAppWebView,
+                              );
+                              if (!launched) {
+                                Fluttertoast.showToast(
+                                  msg: 'Could not launch URL',
+                                );
+                              }
+                            } catch (e) {
+                              Fluttertoast.showToast(
+                                msg: 'Error opening link: $e',
+                              );
+                            }
+                          } else {
+                            Fluttertoast.showToast(msg: 'No link available');
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.email),
+                        label: const Text('Apply / Contact'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () async {
+                          if (job.email.isNotEmpty) {
+                            final Uri emailLaunchUri = Uri(
+                              scheme: 'mailto',
+                              path: job.email.trim(),
+                              queryParameters: {
+                                'subject': 'Application for ${job.title}',
+                              },
+                            );
+                            try {
+                              final launched = await launchUrl(emailLaunchUri);
+                              if (!launched) {
+                                Fluttertoast.showToast(
+                                  msg: 'Could not open mail client',
+                                );
+                              }
+                            } catch (e) {
+                              Fluttertoast.showToast(
+                                msg: 'Error opening mail client: $e',
+                              );
+                            }
+                          } else {
+                            Fluttertoast.showToast(
+                              msg: 'No contact email available',
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
         );
       },
-      child: Scaffold(
-        appBar: AppBar(
-          actions: [
-            InkWell(
-              child: const FaIcon(FontAwesomeIcons.arrowRightFromBracket),
-              onTap: () {
-                context.read<AuthenticatorWatcherBloc>().add(
-                      const AuthenticatorWatcherEvent.signOut(),
-                    );
-              },
+    );
+  }
+
+  Widget _buildCompanyHeader(Company company) {
+    final theme = Theme.of(context);
+    final initials = company.name.trim().isNotEmpty
+        ? company.name
+            .trim()
+            .split(' ')
+            .map((e) => e[0])
+            .take(2)
+            .join()
+            .toUpperCase()
+        : '?';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      color: theme.primaryColor.withOpacity(0.05),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 35,
+            backgroundColor: theme.primaryColor,
+            child: Text(
+              initials,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+              ),
             ),
-            const SizedBox(width: 15),
-          ],
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Text('DashBoard Page'),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            company.name,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.displayMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            company.email,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.hintColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: theme.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '${company.jobCount} Active Opening${company.jobCount == 1 ? '' : 's'}',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: theme.primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return PopScope(
+      canPop: _selectedCompany == null,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _selectedCompany != null) {
+          setState(() {
+            _selectedCompany = null;
+            _searchController.clear();
+            context.read<DashboardBloc>().add(
+                  const DashboardEvent.searchQueryChanged(''),
+                );
+          });
+        }
+      },
+      child: BlocListener<AuthenticatorWatcherBloc, AuthenticatorWatcherState>(
+        listener: (context, state) {
+          state.maybeMap(
+            orElse: () {},
+            unauthenticated: (_) {
+              context.goNamed(AppRoutes.LOGIN_ROUTE_NAME);
+            },
+          );
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(_selectedCompany?.name ?? 'Job Portal'),
+            backgroundColor: theme.primaryColor,
+            foregroundColor: Colors.white,
+            leading: _selectedCompany != null
+                ? IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () {
+                      setState(() {
+                        _selectedCompany = null;
+                        _searchController.clear();
+                        context.read<DashboardBloc>().add(
+                              const DashboardEvent.searchQueryChanged(''),
+                            );
+                      });
+                    },
+                  )
+                : null,
+            actions: [
+              InkWell(
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: FaIcon(
+                    FontAwesomeIcons.arrowRightFromBracket,
+                    color: Colors.white,
+                  ),
+                ),
+                onTap: () {
+                  context.read<AuthenticatorWatcherBloc>().add(
+                        const AuthenticatorWatcherEvent.signOut(),
+                      );
+                },
+              ),
+              const SizedBox(width: 10),
             ],
           ),
+          body: BlocBuilder<DashboardBloc, DashboardState>(
+            builder: (context, state) {
+              final query = state.searchQuery.toLowerCase();
+
+              if (_selectedCompany == null) {
+                // List of companies
+                final filteredCompanies = state.companies.where((company) {
+                  return company.name.toLowerCase().contains(query) ||
+                      company.email.toLowerCase().contains(query);
+                }).toList()
+                  ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+                return Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16.0),
+                      color: theme.primaryColor.withOpacity(0.05),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (val) {
+                          context.read<DashboardBloc>().add(
+                                DashboardEvent.searchQueryChanged(val),
+                              );
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search companies by name or email...',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    context.read<DashboardBloc>().add(
+                                          const DashboardEvent
+                                              .searchQueryChanged(''),
+                                        );
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: theme.cardColor,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 0),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Builder(
+                        builder: (context) {
+                          if (state.state == RequestState.loading ||
+                              state.state == RequestState.empty) {
+                            return Center(
+                              child: SpinKitFadingCircle(
+                                color: theme.primaryColor,
+                                size: 50.0,
+                              ),
+                            );
+                          }
+
+                          if (state.state == RequestState.error) {
+                            logger.error(
+                              "state.errorMessage => ${state.errorMessage}",
+                            );
+                            return Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: theme.colorScheme.error,
+                                      size: 60,
+                                    ),
+                                    const SizedBox(height: 15),
+                                    Text(
+                                      'Oops, something went wrong!',
+                                      style: theme.textTheme.displayMedium,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      state.errorMessage,
+                                      textAlign: TextAlign.center,
+                                      style: theme.textTheme.titleSmall,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    ElevatedButton.icon(
+                                      icon: const Icon(Icons.refresh),
+                                      label: const Text('Try Again'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: theme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        context.read<DashboardBloc>().add(
+                                              const DashboardEvent.fetchData(),
+                                            );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+
+                          if (filteredCompanies.isEmpty) {
+                            return _buildEmptyState(
+                              context,
+                              'No companies found matching "${state.searchQuery}"',
+                            );
+                          }
+
+                          return ListView.builder(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 12.0,
+                            ),
+                            itemCount: filteredCompanies.length,
+                            itemBuilder: (context, index) {
+                              final company = filteredCompanies[index];
+                              return _buildCompanyCard(context, company);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                // Selected company jobs
+                final company = _selectedCompany!;
+                final companyJobs = state.jobs
+                    .where((job) => job.companyId == company.id)
+                    .toList();
+
+                final filteredJobs = companyJobs.where((job) {
+                  return job.title.toLowerCase().contains(query) ||
+                      job.description.toLowerCase().contains(query);
+                }).toList();
+
+                return Column(
+                  children: [
+                    _buildCompanyHeader(company),
+                    Container(
+                      padding: const EdgeInsets.all(16.0),
+                      color: theme.primaryColor.withOpacity(0.05),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (val) {
+                          context.read<DashboardBloc>().add(
+                                DashboardEvent.searchQueryChanged(val),
+                              );
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search jobs under this company...',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    context.read<DashboardBloc>().add(
+                                          const DashboardEvent
+                                              .searchQueryChanged(''),
+                                        );
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: theme.cardColor,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 0),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Builder(
+                        builder: (context) {
+                          if (filteredJobs.isEmpty) {
+                            return _buildEmptyState(
+                              context,
+                              'No jobs found matching "${state.searchQuery}"',
+                            );
+                          }
+
+                          return ListView.builder(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 12.0,
+                            ),
+                            itemCount: filteredJobs.length,
+                            itemBuilder: (context, index) {
+                              final job = filteredJobs[index];
+                              return _buildJobCard(context, job, company.name);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              }
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJobCard(BuildContext context, Job job, String companyName) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () => _showJobDetails(context, job, companyName),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          job.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          companyName,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      _formatTimestamp(job.lastUpdated),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: theme.primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                job.description,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.hintColor,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    'Tap to view details',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: theme.primaryColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 12,
+                    color: theme.primaryColor,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompanyCard(BuildContext context, Company company) {
+    final theme = Theme.of(context);
+    final initials = company.name.trim().isNotEmpty
+        ? company.name
+            .trim()
+            .split(' ')
+            .map((e) => e[0])
+            .take(2)
+            .join()
+            .toUpperCase()
+        : '?';
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedCompany = company;
+            _searchController.clear();
+            context.read<DashboardBloc>().add(
+                  const DashboardEvent.searchQueryChanged(''),
+                );
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 25,
+                backgroundColor: theme.primaryColor,
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      company.name,
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      company.email,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.hintColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: theme.primaryColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      '${company.jobCount}',
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        color: theme.primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      company.jobCount == 1 ? 'Job' : 'Jobs',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: theme.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, String message) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off_outlined,
+              size: 80,
+              color: theme.disabledColor.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.hintColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );
