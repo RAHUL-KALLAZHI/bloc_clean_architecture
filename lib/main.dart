@@ -6,6 +6,7 @@ import 'package:bloc_clean_architecture/src/utilities/logger.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart' as bloc_concurrency;
 import 'package:bloc_clean_architecture/src/comman/themes.dart';
 import 'package:bloc_clean_architecture/src/presentation/bloc/authenticator_watcher/authenticator_watcher_bloc.dart';
+import 'package:bloc_clean_architecture/src/presentation/bloc/dashboard/dashboard_bloc.dart';
 import 'package:bloc_clean_architecture/src/presentation/bloc/sign_in_form/sign_in_form_bloc.dart';
 import 'package:bloc_clean_architecture/src/presentation/cubit/theme/theme_cubit.dart';
 import 'package:bloc_clean_architecture/src/utilities/app_bloc_observer.dart';
@@ -45,6 +46,10 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => di.locator<AuthenticatorWatcherBloc>()),
         BlocProvider(create: (_) => di.locator<SignInFormBloc>()),
         BlocProvider(create: (_) => di.locator<ThemeCubit>()),
+        BlocProvider(
+          create: (_) => di.locator<DashboardBloc>()
+            ..add(const DashboardEvent.fetchData()),
+        ),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
