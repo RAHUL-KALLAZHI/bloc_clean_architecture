@@ -6,6 +6,7 @@ import 'package:bloc_clean_architecture/src/domain/entities/job.dart';
 import 'package:bloc_clean_architecture/src/presentation/bloc/authenticator_watcher/authenticator_watcher_bloc.dart';
 import 'package:bloc_clean_architecture/src/presentation/bloc/dashboard/dashboard_bloc.dart';
 import 'package:bloc_clean_architecture/src/presentation/page/dashboard/dashboard_screen.dart';
+import 'package:bloc_clean_architecture/src/presentation/cubit/theme/theme_cubit.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -61,6 +62,9 @@ void main() {
         BlocProvider<DashboardBloc>.value(
           value: mockDashboardBloc,
         ),
+        BlocProvider<ThemeCubit>(
+          create: (_) => ThemeCubit(),
+        ),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -91,13 +95,7 @@ void main() {
 
     // Assert
     expect(find.text('Job Portal'), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(InkWell),
-        matching: find.byType(FaIcon),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byIcon(Icons.menu), findsOneWidget);
   });
 
   testWidgets('Tapping the sign out icon dispatches signOut event',
@@ -122,13 +120,13 @@ void main() {
     // Act
     await tester.pumpWidget(createWidgetUnderTest(router: router));
 
-    final signOutButtonFinder = find.descendant(
-      of: find.byType(InkWell),
-      matching: find.byType(FaIcon),
-    );
+    // Open the drawer
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
 
-    await tester.tap(signOutButtonFinder);
-    await tester.pump();
+    // Tap on Sign Out
+    await tester.tap(find.text('Sign Out'));
+    await tester.pumpAndSettle();
 
     // Assert
     verify(() => mockAuthenticatorWatcherBloc.add(
