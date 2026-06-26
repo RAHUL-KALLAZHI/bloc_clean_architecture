@@ -38,7 +38,6 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
@@ -51,13 +50,18 @@ class MyApp extends StatelessWidget {
             ..add(const DashboardEvent.fetchData()),
         ),
       ],
-      child: MaterialApp.router(
-        debugShowCheckedModeBanner: false,
-        title: 'flutter bloc clean architecture',
-        theme: themeLight(context),
-        darkTheme: themeDark(context),
-        themeMode: ThemeMode.system,
-        routerConfig: routerinit,
+      child: BlocBuilder<ThemeCubit, ThemeState>(
+        builder: (context, themeState) {
+          final isDark = themeState is ThemeDark;
+          return MaterialApp.router(
+            debugShowCheckedModeBanner: false,
+            title: 'flutter bloc clean architecture',
+            theme: themeLight(context),
+            darkTheme: themeDark(context),
+            themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+            routerConfig: routerinit,
+          );
+        },
       ),
     );
   }

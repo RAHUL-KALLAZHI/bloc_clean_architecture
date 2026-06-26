@@ -5,6 +5,7 @@ class Company {
   final int jobCount;
   final Map<String, bool> jobIds;
   final int lastUpdated;
+  final String? logoUrl;
 
   Company({
     required this.id,
@@ -13,6 +14,7 @@ class Company {
     required this.jobCount,
     required this.jobIds,
     required this.lastUpdated,
+    this.logoUrl,
   });
 
   factory Company.fromJson(String id, Map<dynamic, dynamic> json) {
@@ -30,6 +32,7 @@ class Company {
       jobCount: (json['jobCount'] as num?)?.toInt() ?? 0,
       jobIds: jobIdsMap,
       lastUpdated: (json['lastUpdated'] as num?)?.toInt() ?? 0,
+      logoUrl: json['logoUrl'] as String?,
     );
   }
 }

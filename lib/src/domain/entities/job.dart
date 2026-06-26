@@ -6,6 +6,8 @@ class Job {
   final String email;
   final String jobUrl;
   final int lastUpdated;
+  final String? postedDate;
+  final String? lastDateToApply;
 
   Job({
     required this.id,
@@ -15,6 +17,8 @@ class Job {
     required this.email,
     required this.jobUrl,
     required this.lastUpdated,
+    this.postedDate,
+    this.lastDateToApply,
   });
 
   factory Job.fromJson(String id, Map<dynamic, dynamic> json) {
@@ -26,6 +30,8 @@ class Job {
       email: (json['email'] as String?) ?? '',
       jobUrl: (json['jobUrl'] as String?) ?? '',
       lastUpdated: (json['lastUpdated'] as num?)?.toInt() ?? 0,
+      postedDate: json['postedDate'] as String?,
+      lastDateToApply: json['lastDateToApply'] as String?,
     );
   }
 }

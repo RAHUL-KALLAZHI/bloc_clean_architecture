@@ -13,6 +13,9 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:bloc_clean_architecture/src/presentation/cubit/theme/theme_cubit.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class DashBoardScreen extends StatefulWidget {
   const DashBoardScreen({super.key});
@@ -96,6 +99,80 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                   'Updated on ${_formatTimestamp(job.lastUpdated)}',
                   style: theme.textTheme.titleSmall,
                 ),
+                if ((job.postedDate != null && job.postedDate!.isNotEmpty) ||
+                    (job.lastDateToApply != null &&
+                        job.lastDateToApply!.isNotEmpty)) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: [
+                      if (job.postedDate != null && job.postedDate!.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: theme.primaryColor.withOpacity(0.15),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                size: 14,
+                                color: theme.primaryColor,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Published: ${job.postedDate}',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: theme.primaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (job.lastDateToApply != null &&
+                          job.lastDateToApply!.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.error.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: theme.colorScheme.error.withOpacity(0.15),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.hourglass_empty_outlined,
+                                size: 14,
+                                color: theme.colorScheme.error,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Apply by: ${job.lastDateToApply}',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: theme.colorScheme.error,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
                 const Divider(height: 30),
                 Text(
                   'Job Description',
@@ -207,6 +284,58 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
     );
   }
 
+  List<Company> _groupCompanies(List<Company> companies) {
+    final Map<String, List<Company>> groupedByName = {};
+    for (final company in companies) {
+      final key = company.name.trim().toLowerCase();
+      if (key.isNotEmpty) {
+        groupedByName.putIfAbsent(key, () => []).add(company);
+      }
+    }
+
+    final List<Company> uniqueCompanies = [];
+    groupedByName.forEach((key, list) {
+      final first = list.first;
+      
+      final Map<String, bool> combinedJobIds = {};
+      for (final c in list) {
+        combinedJobIds.addAll(c.jobIds);
+      }
+      
+      int combinedJobCount = 0;
+      for (final c in list) {
+        combinedJobCount += c.jobCount;
+      }
+      
+      int newestLastUpdated = 0;
+      for (final c in list) {
+        if (c.lastUpdated > newestLastUpdated) {
+          newestLastUpdated = c.lastUpdated;
+        }
+      }
+      
+      String? mergedLogoUrl;
+      for (final c in list) {
+        if (c.logoUrl != null && c.logoUrl!.trim().isNotEmpty) {
+          mergedLogoUrl = c.logoUrl;
+          break;
+        }
+      }
+
+      uniqueCompanies.add(Company(
+        id: first.id,
+        name: first.name,
+        email: first.email,
+        jobCount: combinedJobCount,
+        jobIds: combinedJobIds,
+        lastUpdated: newestLastUpdated,
+        logoUrl: mergedLogoUrl,
+      ));
+    });
+
+    return uniqueCompanies;
+  }
+
   Widget _buildCompanyHeader(Company company) {
     final theme = Theme.of(context);
     final initials = company.name.trim().isNotEmpty
@@ -227,15 +356,40 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
         children: [
           CircleAvatar(
             radius: 35,
-            backgroundColor: theme.primaryColor,
-            child: Text(
-              initials,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 24,
-              ),
-            ),
+            backgroundColor:
+                (company.logoUrl != null && company.logoUrl!.isNotEmpty)
+                    ? Colors.white
+                    : theme.primaryColor,
+            child: (company.logoUrl != null && company.logoUrl!.isNotEmpty)
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(35),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4.0),
+                      child: CachedNetworkImage(
+                        imageUrl: company.logoUrl!,
+                        fit: BoxFit.contain,
+                        placeholder: (context, url) => const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        errorWidget: (context, url, error) => Text(
+                          initials,
+                          style: TextStyle(
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : Text(
+                    initials,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
+                  ),
           ),
           const SizedBox(height: 12),
           Text(
@@ -316,163 +470,129 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                       });
                     },
                   )
-                : null,
-            actions: [
-              InkWell(
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: FaIcon(
-                    FontAwesomeIcons.arrowRightFromBracket,
-                    color: Colors.white,
+                : Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                    ),
+                  ),
+          ),
+          drawer: Drawer(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                Builder(
+                  builder: (context) {
+                    User? user;
+                    try {
+                      user = FirebaseAuth.instance.currentUser;
+                    } catch (_) {
+                      // Safe fallback if Firebase is not initialized (e.g. in widget tests)
+                    }
+                    final email = user?.email ?? 'No Email';
+                    final name = user?.displayName ?? 'Guest User';
+                    final photoUrl = user?.photoURL;
+
+                    return UserAccountsDrawerHeader(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor,
+                      ),
+                      currentAccountPicture: CircleAvatar(
+                        backgroundImage:
+                            photoUrl != null ? NetworkImage(photoUrl) : null,
+                        backgroundColor: Colors.white,
+                        child: photoUrl == null
+                            ? Text(
+                                name.trim().isNotEmpty
+                                    ? name
+                                        .trim()
+                                        .split(' ')
+                                        .map((e) => e[0])
+                                        .take(2)
+                                        .join()
+                                        .toUpperCase()
+                                    : '?',
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 24,
+                                ),
+                              )
+                            : null,
+                      ),
+                      accountName: Text(
+                        name,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      accountEmail: Text(email),
+                    );
+                  },
+                ),
+                BlocBuilder<ThemeCubit, ThemeState>(
+                  builder: (context, themeState) {
+                    final isDark = themeState is ThemeDark;
+                    return SwitchListTile(
+                      title: const Text('Dark Mode'),
+                      secondary:
+                          Icon(isDark ? Icons.dark_mode : Icons.light_mode),
+                      value: isDark,
+                      onChanged: (_) {
+                        context.read<ThemeCubit>().changeTheme();
+                      },
+                    );
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.exit_to_app, color: Colors.red),
+                  title: const Text(
+                    'Sign Out',
+                    style: TextStyle(
+                        color: Colors.red, fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    context.read<AuthenticatorWatcherBloc>().add(
+                          const AuthenticatorWatcherEvent.signOut(),
+                        );
+                  },
+                ),
+                const Divider(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(
+                    child: Text(
+                      'App Version: 1.0.0+1',
+                      style: TextStyle(
+                          color: Theme.of(context).hintColor, fontSize: 12),
+                    ),
                   ),
                 ),
-                onTap: () {
-                  context.read<AuthenticatorWatcherBloc>().add(
-                        const AuthenticatorWatcherEvent.signOut(),
-                      );
-                },
-              ),
-              const SizedBox(width: 10),
-            ],
+              ],
+            ),
           ),
           body: BlocBuilder<DashboardBloc, DashboardState>(
             builder: (context, state) {
               final query = state.searchQuery.toLowerCase();
 
-              if (_selectedCompany == null) {
-                // List of companies
-                final filteredCompanies = state.companies.where((company) {
-                  return company.name.toLowerCase().contains(query) ||
-                      company.email.toLowerCase().contains(query);
-                }).toList()
-                  ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-
-                return Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16.0),
-                      color: theme.primaryColor.withOpacity(0.05),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (val) {
-                          context.read<DashboardBloc>().add(
-                                DashboardEvent.searchQueryChanged(val),
-                              );
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Search companies by name or email...',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    context.read<DashboardBloc>().add(
-                                          const DashboardEvent
-                                              .searchQueryChanged(''),
-                                        );
-                                  },
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: theme.cardColor,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 0),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30.0),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Builder(
-                        builder: (context) {
-                          if (state.state == RequestState.loading ||
-                              state.state == RequestState.empty) {
-                            return Center(
-                              child: SpinKitFadingCircle(
-                                color: theme.primaryColor,
-                                size: 50.0,
-                              ),
-                            );
-                          }
-
-                          if (state.state == RequestState.error) {
-                            logger.error(
-                              "state.errorMessage => ${state.errorMessage}",
-                            );
-                            return Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24.0),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.error_outline,
-                                      color: theme.colorScheme.error,
-                                      size: 60,
-                                    ),
-                                    const SizedBox(height: 15),
-                                    Text(
-                                      'Oops, something went wrong!',
-                                      style: theme.textTheme.displayMedium,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      state.errorMessage,
-                                      textAlign: TextAlign.center,
-                                      style: theme.textTheme.titleSmall,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    ElevatedButton.icon(
-                                      icon: const Icon(Icons.refresh),
-                                      label: const Text('Try Again'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: theme.primaryColor,
-                                        foregroundColor: Colors.white,
-                                      ),
-                                      onPressed: () {
-                                        context.read<DashboardBloc>().add(
-                                              const DashboardEvent.fetchData(),
-                                            );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-
-                          if (filteredCompanies.isEmpty) {
-                            return _buildEmptyState(
-                              context,
-                              'No companies found matching "${state.searchQuery}"',
-                            );
-                          }
-
-                          return ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                              vertical: 12.0,
-                            ),
-                            itemCount: filteredCompanies.length,
-                            itemBuilder: (context, index) {
-                              final company = filteredCompanies[index];
-                              return _buildCompanyCard(context, company);
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                );
-              } else {
+              if (_selectedCompany != null) {
                 // Selected company jobs
                 final company = _selectedCompany!;
-                final companyJobs = state.jobs
-                    .where((job) => job.companyId == company.id)
-                    .toList();
+                final companyJobs = state.jobs.where((job) {
+                  final jobCompany = state.companies.firstWhere(
+                    (c) => c.id == job.companyId,
+                    orElse: () => Company(
+                      id: '',
+                      name: '',
+                      email: '',
+                      jobCount: 0,
+                      jobIds: const {},
+                      lastUpdated: 0,
+                    ),
+                  );
+                  return jobCompany.name.trim().toLowerCase() ==
+                      company.name.trim().toLowerCase();
+                }).toList();
 
                 final filteredJobs = companyJobs.where((job) {
                   return job.title.toLowerCase().contains(query) ||
@@ -529,6 +649,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                           }
 
                           return ListView.builder(
+                            key: ValueKey('jobs_list_${company.id}'),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16.0,
                               vertical: 12.0,
@@ -536,7 +657,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                             itemCount: filteredJobs.length,
                             itemBuilder: (context, index) {
                               final job = filteredJobs[index];
-                              return _buildJobCard(context, job, company.name);
+                              return _buildJobCard(context, job, company);
                             },
                           );
                         },
@@ -545,6 +666,135 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                   ],
                 );
               }
+
+              // Otherwise, list of companies (grouped to merge duplicates)
+              final filteredCompanies = state.companies.where((company) {
+                return company.name.toLowerCase().contains(query) ||
+                    company.email.toLowerCase().contains(query);
+              }).toList();
+
+              final uniqueCompanies = _groupCompanies(filteredCompanies)
+                ..sort((a, b) =>
+                    a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+              return Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16.0),
+                    color: theme.primaryColor.withOpacity(0.05),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (val) {
+                        context.read<DashboardBloc>().add(
+                              DashboardEvent.searchQueryChanged(val),
+                            );
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search companies by name or email...',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  context.read<DashboardBloc>().add(
+                                        const DashboardEvent
+                                            .searchQueryChanged(''),
+                                      );
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: theme.cardColor,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 0),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Builder(
+                      builder: (context) {
+                        if (state.state == RequestState.loading ||
+                            state.state == RequestState.empty) {
+                          return Center(
+                            child: SpinKitFadingCircle(
+                              color: theme.primaryColor,
+                              size: 50.0,
+                            ),
+                          );
+                        }
+
+                        if (state.state == RequestState.error) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: theme.colorScheme.error,
+                                    size: 60,
+                                  ),
+                                  const SizedBox(height: 15),
+                                  Text(
+                                    'Oops, something went wrong!',
+                                    style: theme.textTheme.displayMedium,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    state.errorMessage,
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.titleSmall,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  ElevatedButton.icon(
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Try Again'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: theme.primaryColor,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    onPressed: () {
+                                      context.read<DashboardBloc>().add(
+                                            const DashboardEvent.fetchData(),
+                                          );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (uniqueCompanies.isEmpty) {
+                          return _buildEmptyState(
+                            context,
+                            'No companies found matching "${state.searchQuery}"',
+                          );
+                        }
+
+                        return ListView.builder(
+                          key: const PageStorageKey('companies_list_view'),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 12.0,
+                          ),
+                          itemCount: uniqueCompanies.length,
+                          itemBuilder: (context, index) {
+                            final company = uniqueCompanies[index];
+                            return _buildCompanyCard(context, company);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
             },
           ),
         ),
@@ -552,8 +802,18 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
     );
   }
 
-  Widget _buildJobCard(BuildContext context, Job job, String companyName) {
+  Widget _buildJobCard(BuildContext context, Job job, Company company) {
     final theme = Theme.of(context);
+    final initials = company.name.trim().isNotEmpty
+        ? company.name
+            .trim()
+            .split(' ')
+            .map((e) => e[0])
+            .take(2)
+            .join()
+            .toUpperCase()
+        : '?';
+
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12.0),
@@ -561,7 +821,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
-        onTap: () => _showJobDetails(context, job, companyName),
+        onTap: () => _showJobDetails(context, job, company.name),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -571,6 +831,44 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor:
+                        (company.logoUrl != null && company.logoUrl!.isNotEmpty)
+                            ? Colors.white
+                            : theme.primaryColor,
+                    child: (company.logoUrl != null && company.logoUrl!.isNotEmpty)
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(22),
+                            child: Padding(
+                              padding: const EdgeInsets.all(2.0),
+                              child: CachedNetworkImage(
+                                imageUrl: company.logoUrl!,
+                                fit: BoxFit.contain,
+                                placeholder: (context, url) => const Center(
+                                  child: CircularProgressIndicator(strokeWidth: 1.0),
+                                ),
+                                errorWidget: (context, url, error) => Text(
+                                  initials,
+                                  style: TextStyle(
+                                    color: theme.primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            initials,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,12 +883,69 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          companyName,
+                          company.name,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.primaryColor,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                        if ((job.postedDate != null &&
+                                job.postedDate!.isNotEmpty) ||
+                            (job.lastDateToApply != null &&
+                                job.lastDateToApply!.isNotEmpty)) ...[
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 4,
+                            children: [
+                              if (job.postedDate != null &&
+                                  job.postedDate!.isNotEmpty)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.calendar_today_outlined,
+                                      size: 12,
+                                      color: theme.hintColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Posted: ${job.postedDate}',
+                                      style: theme.textTheme.headlineSmall
+                                          ?.copyWith(
+                                        color: theme.hintColor,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              if (job.lastDateToApply != null &&
+                                  job.lastDateToApply!.isNotEmpty)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.hourglass_empty_outlined,
+                                      size: 12,
+                                      color: theme.colorScheme.error
+                                          .withOpacity(0.8),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Apply by: ${job.lastDateToApply}',
+                                      style: theme.textTheme.headlineSmall
+                                          ?.copyWith(
+                                        color: theme.colorScheme.error
+                                            .withOpacity(0.8),
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -683,15 +1038,41 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
             children: [
               CircleAvatar(
                 radius: 25,
-                backgroundColor: theme.primaryColor,
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
+                backgroundColor:
+                    (company.logoUrl != null && company.logoUrl!.isNotEmpty)
+                        ? Colors.white
+                        : theme.primaryColor,
+                child: (company.logoUrl != null && company.logoUrl!.isNotEmpty)
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(25),
+                        child: Padding(
+                          padding: const EdgeInsets.all(3.0),
+                          child: CachedNetworkImage(
+                            imageUrl: company.logoUrl!,
+                            fit: BoxFit.contain,
+                            placeholder: (context, url) => const Center(
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 1.5),
+                            ),
+                            errorWidget: (context, url, error) => Text(
+                              initials,
+                              style: TextStyle(
+                                color: theme.primaryColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
               ),
               const SizedBox(width: 16),
               Expanded(

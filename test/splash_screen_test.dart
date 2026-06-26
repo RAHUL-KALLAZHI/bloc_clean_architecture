@@ -3,6 +3,7 @@ import 'package:bloc_clean_architecture/src/comman/routes.dart';
 import 'package:bloc_clean_architecture/src/presentation/bloc/authenticator_watcher/authenticator_watcher_bloc.dart';
 import 'package:bloc_clean_architecture/src/presentation/page/splash/splash_screen.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:bloc_clean_architecture/src/comman/themes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,8 +39,14 @@ void main() {
   Widget createWidgetUnderTest({required GoRouter router}) {
     return BlocProvider<AuthenticatorWatcherBloc>.value(
       value: mockAuthenticatorWatcherBloc,
-      child: MaterialApp.router(
-        routerConfig: router,
+      child: Builder(
+        builder: (context) {
+          return MaterialApp.router(
+            theme: themeLight(context),
+            darkTheme: themeDark(context),
+            routerConfig: router,
+          );
+        },
       ),
     );
   }
@@ -65,14 +72,18 @@ void main() {
     await tester.pumpWidget(createWidgetUnderTest(router: router));
 
     // Assert
-    expect(find.text('Splash Screen.'), findsOneWidget);
+    expect(find.text('NEON '), findsOneWidget);
+    expect(find.text('FUTURE-PROOF YOUR CAREER'), findsOneWidget);
 
-    // Wait for the Future.delayed of 1 second in initState to trigger the event
-    await tester.pump(const Duration(seconds: 1));
+    // Let the initState macro task execute and request auth check
+    await tester.pump();
 
     verify(() => mockAuthenticatorWatcherBloc.add(
           const AuthenticatorWatcherEvent.authCheckRequest(),
         )).called(1);
+        
+    // Clean up timer
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets('Redirects to login page on isFirstTime state',
@@ -103,10 +114,12 @@ void main() {
 
     // Act
     await tester.pumpWidget(createWidgetUnderTest(router: router));
-    await tester.pump(const Duration(seconds: 1));
 
     // Emit isFirstTime state
     controller.add(const AuthenticatorWatcherState.isFirstTime());
+    
+    // Advance progress simulation timer (2000ms) + 300ms transition delay
+    await tester.pump(const Duration(milliseconds: 2500));
     await tester.pumpAndSettle();
 
     // Assert
@@ -142,10 +155,12 @@ void main() {
 
     // Act
     await tester.pumpWidget(createWidgetUnderTest(router: router));
-    await tester.pump(const Duration(seconds: 1));
 
     // Emit unauthenticated state
     controller.add(const AuthenticatorWatcherState.unauthenticated());
+    
+    // Advance progress simulation timer (2000ms) + 300ms transition delay
+    await tester.pump(const Duration(milliseconds: 2500));
     await tester.pumpAndSettle();
 
     // Assert
@@ -181,10 +196,12 @@ void main() {
 
     // Act
     await tester.pumpWidget(createWidgetUnderTest(router: router));
-    await tester.pump(const Duration(seconds: 1));
 
     // Emit authenticated state
     controller.add(const AuthenticatorWatcherState.authenticated());
+    
+    // Advance progress simulation timer (2000ms) + 300ms transition delay
+    await tester.pump(const Duration(milliseconds: 2500));
     await tester.pumpAndSettle();
 
     // Assert

@@ -6,6 +6,7 @@ import 'package:bloc_clean_architecture/src/domain/entities/job.dart';
 import 'package:bloc_clean_architecture/src/presentation/bloc/authenticator_watcher/authenticator_watcher_bloc.dart';
 import 'package:bloc_clean_architecture/src/presentation/bloc/dashboard/dashboard_bloc.dart';
 import 'package:bloc_clean_architecture/src/presentation/page/dashboard/dashboard_screen.dart';
+import 'package:bloc_clean_architecture/src/presentation/cubit/theme/theme_cubit.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -61,6 +62,9 @@ void main() {
         BlocProvider<DashboardBloc>.value(
           value: mockDashboardBloc,
         ),
+        BlocProvider<ThemeCubit>(
+          create: (_) => ThemeCubit(),
+        ),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -91,13 +95,7 @@ void main() {
 
     // Assert
     expect(find.text('Job Portal'), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(InkWell),
-        matching: find.byType(FaIcon),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byIcon(Icons.menu), findsOneWidget);
   });
 
   testWidgets('Tapping the sign out icon dispatches signOut event',
@@ -122,13 +120,13 @@ void main() {
     // Act
     await tester.pumpWidget(createWidgetUnderTest(router: router));
 
-    final signOutButtonFinder = find.descendant(
-      of: find.byType(InkWell),
-      matching: find.byType(FaIcon),
-    );
+    // Open the drawer
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
 
-    await tester.tap(signOutButtonFinder);
-    await tester.pump();
+    // Tap on Sign Out
+    await tester.tap(find.text('Sign Out'));
+    await tester.pumpAndSettle();
 
     // Assert
     verify(() => mockAuthenticatorWatcherBloc.add(
@@ -199,6 +197,8 @@ void main() {
         email: 'career@aabasoft.com',
         jobUrl: 'https://aabasoft.com',
         lastUpdated: 1782126607,
+        postedDate: '15-05-2026',
+        lastDateToApply: '03 Jul 2026',
       ),
     ];
 
@@ -237,6 +237,23 @@ void main() {
     // Assert - Shows the job list and the back button
     expect(find.text('Software Testing'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    
+    // Assert - New metadata fields on job card
+    expect(find.text('Posted: 15-05-2026'), findsOneWidget);
+    expect(find.text('Apply by: 03 Jul 2026'), findsOneWidget);
+
+    // Act - Tap on the job card to open details bottom sheet
+    await tester.tap(find.text('Software Testing'));
+    await tester.pumpAndSettle();
+
+    // Assert - New metadata fields in bottom sheet
+    expect(find.text('Published: 15-05-2026'), findsOneWidget);
+    expect(find.text('Apply by: 03 Jul 2026'), findsWidgets); // Can be on card & sheet
+
+    // Act - Close bottom sheet (tap barrier or drag down, or just navigate back via back button if sheet is popped first)
+    // We can simulate popping the sheet
+    Navigator.of(tester.element(find.text('Published: 15-05-2026'))).pop();
+    await tester.pumpAndSettle();
 
     // Act - Tap the back button
     await tester.tap(find.byIcon(Icons.arrow_back));
