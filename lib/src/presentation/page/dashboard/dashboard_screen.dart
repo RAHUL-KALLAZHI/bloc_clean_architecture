@@ -284,6 +284,58 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
     );
   }
 
+  List<Company> _groupCompanies(List<Company> companies) {
+    final Map<String, List<Company>> groupedByName = {};
+    for (final company in companies) {
+      final key = company.name.trim().toLowerCase();
+      if (key.isNotEmpty) {
+        groupedByName.putIfAbsent(key, () => []).add(company);
+      }
+    }
+
+    final List<Company> uniqueCompanies = [];
+    groupedByName.forEach((key, list) {
+      final first = list.first;
+      
+      final Map<String, bool> combinedJobIds = {};
+      for (final c in list) {
+        combinedJobIds.addAll(c.jobIds);
+      }
+      
+      int combinedJobCount = 0;
+      for (final c in list) {
+        combinedJobCount += c.jobCount;
+      }
+      
+      int newestLastUpdated = 0;
+      for (final c in list) {
+        if (c.lastUpdated > newestLastUpdated) {
+          newestLastUpdated = c.lastUpdated;
+        }
+      }
+      
+      String? mergedLogoUrl;
+      for (final c in list) {
+        if (c.logoUrl != null && c.logoUrl!.trim().isNotEmpty) {
+          mergedLogoUrl = c.logoUrl;
+          break;
+        }
+      }
+
+      uniqueCompanies.add(Company(
+        id: first.id,
+        name: first.name,
+        email: first.email,
+        jobCount: combinedJobCount,
+        jobIds: combinedJobIds,
+        lastUpdated: newestLastUpdated,
+        logoUrl: mergedLogoUrl,
+      ));
+    });
+
+    return uniqueCompanies;
+  }
+
   Widget _buildCompanyHeader(Company company) {
     final theme = Theme.of(context);
     final initials = company.name.trim().isNotEmpty
@@ -523,142 +575,24 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
             builder: (context, state) {
               final query = state.searchQuery.toLowerCase();
 
-              if (_selectedCompany == null) {
-                // List of companies
-                final filteredCompanies = state.companies.where((company) {
-                  return company.name.toLowerCase().contains(query) ||
-                      company.email.toLowerCase().contains(query);
-                }).toList()
-                  ..sort((a, b) =>
-                      a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-
-                return Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16.0),
-                      color: theme.primaryColor.withOpacity(0.05),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (val) {
-                          context.read<DashboardBloc>().add(
-                                DashboardEvent.searchQueryChanged(val),
-                              );
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Search companies by name or email...',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    context.read<DashboardBloc>().add(
-                                          const DashboardEvent
-                                              .searchQueryChanged(''),
-                                        );
-                                  },
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: theme.cardColor,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 0),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30.0),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Builder(
-                        builder: (context) {
-                          if (state.state == RequestState.loading ||
-                              state.state == RequestState.empty) {
-                            return Center(
-                              child: SpinKitFadingCircle(
-                                color: theme.primaryColor,
-                                size: 50.0,
-                              ),
-                            );
-                          }
-
-                          if (state.state == RequestState.error) {
-                            logger.error(
-                              "state.errorMessage => ${state.errorMessage}",
-                            );
-                            return Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24.0),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.error_outline,
-                                      color: theme.colorScheme.error,
-                                      size: 60,
-                                    ),
-                                    const SizedBox(height: 15),
-                                    Text(
-                                      'Oops, something went wrong!',
-                                      style: theme.textTheme.displayMedium,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      state.errorMessage,
-                                      textAlign: TextAlign.center,
-                                      style: theme.textTheme.titleSmall,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    ElevatedButton.icon(
-                                      icon: const Icon(Icons.refresh),
-                                      label: const Text('Try Again'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: theme.primaryColor,
-                                        foregroundColor: Colors.white,
-                                      ),
-                                      onPressed: () {
-                                        context.read<DashboardBloc>().add(
-                                              const DashboardEvent.fetchData(),
-                                            );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-
-                          if (filteredCompanies.isEmpty) {
-                            return _buildEmptyState(
-                              context,
-                              'No companies found matching "${state.searchQuery}"',
-                            );
-                          }
-
-                          return ListView.builder(
-                            key: const PageStorageKey('companies_list_view'),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                              vertical: 12.0,
-                            ),
-                            itemCount: filteredCompanies.length,
-                            itemBuilder: (context, index) {
-                              final company = filteredCompanies[index];
-                              return _buildCompanyCard(context, company);
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                );
-              } else {
+              if (_selectedCompany != null) {
                 // Selected company jobs
                 final company = _selectedCompany!;
-                final companyJobs = state.jobs
-                    .where((job) => job.companyId == company.id)
-                    .toList();
+                final companyJobs = state.jobs.where((job) {
+                  final jobCompany = state.companies.firstWhere(
+                    (c) => c.id == job.companyId,
+                    orElse: () => Company(
+                      id: '',
+                      name: '',
+                      email: '',
+                      jobCount: 0,
+                      jobIds: const {},
+                      lastUpdated: 0,
+                    ),
+                  );
+                  return jobCompany.name.trim().toLowerCase() ==
+                      company.name.trim().toLowerCase();
+                }).toList();
 
                 final filteredJobs = companyJobs.where((job) {
                   return job.title.toLowerCase().contains(query) ||
@@ -723,7 +657,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                             itemCount: filteredJobs.length,
                             itemBuilder: (context, index) {
                               final job = filteredJobs[index];
-                              return _buildJobCard(context, job, company.name);
+                              return _buildJobCard(context, job, company);
                             },
                           );
                         },
@@ -732,6 +666,135 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                   ],
                 );
               }
+
+              // Otherwise, list of companies (grouped to merge duplicates)
+              final filteredCompanies = state.companies.where((company) {
+                return company.name.toLowerCase().contains(query) ||
+                    company.email.toLowerCase().contains(query);
+              }).toList();
+
+              final uniqueCompanies = _groupCompanies(filteredCompanies)
+                ..sort((a, b) =>
+                    a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+              return Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16.0),
+                    color: theme.primaryColor.withOpacity(0.05),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (val) {
+                        context.read<DashboardBloc>().add(
+                              DashboardEvent.searchQueryChanged(val),
+                            );
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search companies by name or email...',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  context.read<DashboardBloc>().add(
+                                        const DashboardEvent
+                                            .searchQueryChanged(''),
+                                      );
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: theme.cardColor,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 0),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Builder(
+                      builder: (context) {
+                        if (state.state == RequestState.loading ||
+                            state.state == RequestState.empty) {
+                          return Center(
+                            child: SpinKitFadingCircle(
+                              color: theme.primaryColor,
+                              size: 50.0,
+                            ),
+                          );
+                        }
+
+                        if (state.state == RequestState.error) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: theme.colorScheme.error,
+                                    size: 60,
+                                  ),
+                                  const SizedBox(height: 15),
+                                  Text(
+                                    'Oops, something went wrong!',
+                                    style: theme.textTheme.displayMedium,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    state.errorMessage,
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.titleSmall,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  ElevatedButton.icon(
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Try Again'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: theme.primaryColor,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    onPressed: () {
+                                      context.read<DashboardBloc>().add(
+                                            const DashboardEvent.fetchData(),
+                                          );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (uniqueCompanies.isEmpty) {
+                          return _buildEmptyState(
+                            context,
+                            'No companies found matching "${state.searchQuery}"',
+                          );
+                        }
+
+                        return ListView.builder(
+                          key: const PageStorageKey('companies_list_view'),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 12.0,
+                          ),
+                          itemCount: uniqueCompanies.length,
+                          itemBuilder: (context, index) {
+                            final company = uniqueCompanies[index];
+                            return _buildCompanyCard(context, company);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
             },
           ),
         ),
@@ -739,8 +802,18 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
     );
   }
 
-  Widget _buildJobCard(BuildContext context, Job job, String companyName) {
+  Widget _buildJobCard(BuildContext context, Job job, Company company) {
     final theme = Theme.of(context);
+    final initials = company.name.trim().isNotEmpty
+        ? company.name
+            .trim()
+            .split(' ')
+            .map((e) => e[0])
+            .take(2)
+            .join()
+            .toUpperCase()
+        : '?';
+
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12.0),
@@ -748,7 +821,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
-        onTap: () => _showJobDetails(context, job, companyName),
+        onTap: () => _showJobDetails(context, job, company.name),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -758,6 +831,44 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor:
+                        (company.logoUrl != null && company.logoUrl!.isNotEmpty)
+                            ? Colors.white
+                            : theme.primaryColor,
+                    child: (company.logoUrl != null && company.logoUrl!.isNotEmpty)
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(22),
+                            child: Padding(
+                              padding: const EdgeInsets.all(2.0),
+                              child: CachedNetworkImage(
+                                imageUrl: company.logoUrl!,
+                                fit: BoxFit.contain,
+                                placeholder: (context, url) => const Center(
+                                  child: CircularProgressIndicator(strokeWidth: 1.0),
+                                ),
+                                errorWidget: (context, url, error) => Text(
+                                  initials,
+                                  style: TextStyle(
+                                    color: theme.primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            initials,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -772,7 +883,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          companyName,
+                          company.name,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.primaryColor,
                             fontWeight: FontWeight.w600,
