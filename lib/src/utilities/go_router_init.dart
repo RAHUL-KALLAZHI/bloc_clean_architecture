@@ -35,7 +35,7 @@ GoRouter routerinit = GoRouter(
       name: AppRoutes.SIGNUP_ROUTE_NAME,
       path: AppRoutes.SIGNUP_ROUTE_PATH,
       builder: (BuildContext context, GoRouterState state) {
-        return const SignUnPage();
+        return const SignUpPage();
       },
     ),
 

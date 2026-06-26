@@ -7,6 +7,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:bloc_clean_architecture/src/presentation/bloc/sign_in_form/sign_in_form_bloc.dart';
+import 'package:bloc_clean_architecture/src/comman/themes.dart';
 
 // Mocking the SignInFormBloc
 class MockSignInFormBloc extends MockBloc<SignInFormEvent, SignInFormState> implements SignInFormBloc {}
@@ -32,10 +33,16 @@ void main() {
   });
 
   Widget createWidgetUnderTest() {
-    return MaterialApp(
-      home: BlocProvider<SignInFormBloc>(
-        create: (_) => mockSignInFormBloc,
-        child: const SignInPage(),
+    return BlocProvider<SignInFormBloc>(
+      create: (_) => mockSignInFormBloc,
+      child: Builder(
+        builder: (context) {
+          return MaterialApp(
+            theme: themeLight(context),
+            darkTheme: themeDark(context),
+            home: const SignInPage(),
+          );
+        },
       ),
     );
   }

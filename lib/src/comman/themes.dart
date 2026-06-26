@@ -227,6 +227,29 @@ class SplashTheme extends ThemeExtension<SplashTheme> {
   final Color versionDividerColor;
   final Color versionTextColor;
 
+  static SplashTheme of(BuildContext context) {
+    return Theme.of(context).extension<SplashTheme>() ?? const SplashTheme(
+      backgroundColor: Colors.transparent,
+      gridColor: Colors.transparent,
+      scanlineColor: Colors.transparent,
+      centerGlowColor: Colors.transparent,
+      bottomGlowColor: Colors.transparent,
+      logoCardBg: Colors.transparent,
+      logoCardBorderColor: Colors.transparent,
+      logoCardShadowColor: Colors.transparent,
+      gradientColors: [Colors.blue, Colors.purple],
+      neonTitleColor: Colors.grey,
+      taglineColor: Colors.grey,
+      statusColor: Colors.grey,
+      percentageColor: Colors.grey,
+      progressBarTrackBg: Colors.transparent,
+      progressBarTrackBorderColor: Colors.transparent,
+      progressBarGlowColor: Colors.transparent,
+      versionDividerColor: Colors.transparent,
+      versionTextColor: Colors.transparent,
+    );
+  }
+
   const SplashTheme({
     required this.backgroundColor,
     required this.gridColor,
