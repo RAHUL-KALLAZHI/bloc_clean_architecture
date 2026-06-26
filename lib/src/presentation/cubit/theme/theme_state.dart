@@ -7,5 +7,6 @@ abstract class ThemeState extends Equatable {
   List<Object> get props => [];
 }
 
+class ThemeSystem extends ThemeState {}
 class ThemeLight extends ThemeState {}
 class ThemeDark extends ThemeState {}

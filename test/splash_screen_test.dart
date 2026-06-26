@@ -86,7 +86,7 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
   });
 
-  testWidgets('Redirects to login page on isFirstTime state',
+  testWidgets('Redirects to onboarding page on isFirstTime state',
       (WidgetTester tester) async {
     // Arrange
     final controller = StreamController<AuthenticatorWatcherState>();
@@ -105,9 +105,9 @@ void main() {
           builder: (context, state) => const SplashScreen(),
         ),
         GoRoute(
-          path: AppRoutes.LOGIN_ROUTE_PATH,
-          name: AppRoutes.LOGIN_ROUTE_NAME,
-          builder: (context, state) => const Scaffold(body: Text('Login Page')),
+          path: AppRoutes.ONBOARDING_ROUTE_PATH,
+          name: AppRoutes.ONBOARDING_ROUTE_NAME,
+          builder: (context, state) => const Scaffold(body: Text('Onboarding Page')),
         ),
       ],
     );
@@ -123,7 +123,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Assert
-    expect(find.text('Login Page'), findsOneWidget);
+    expect(find.text('Onboarding Page'), findsOneWidget);
     await controller.close();
   });
 

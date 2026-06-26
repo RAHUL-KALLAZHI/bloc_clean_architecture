@@ -3,6 +3,7 @@ import 'package:bloc_clean_architecture/src/presentation/page/auth/sign_in_scree
 import 'package:bloc_clean_architecture/src/presentation/page/auth/sign_up_screen.dart';
 import 'package:bloc_clean_architecture/src/presentation/page/dashboard/dashboard_screen.dart';
 import 'package:bloc_clean_architecture/src/presentation/page/error/error_screen.dart';
+import 'package:bloc_clean_architecture/src/presentation/page/onboarding/onboarding_screen.dart';
 import 'package:bloc_clean_architecture/src/presentation/page/splash/splash_screen.dart';
 import 'package:bloc_clean_architecture/src/utilities/logger.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,17 @@ GoRouter routerinit = GoRouter(
       path: AppRoutes.SPLASH_ROUTE_PATH,
       builder: (BuildContext context, GoRouterState state) {
         return const SplashScreen();
+      },
+    ),
+
+    ///  =================================================================
+    /// ********************** Onboarding Route *************************
+    /// ==================================================================
+    GoRoute(
+      name: AppRoutes.ONBOARDING_ROUTE_NAME,
+      path: AppRoutes.ONBOARDING_ROUTE_PATH,
+      builder: (BuildContext context, GoRouterState state) {
+        return const OnboardingScreen();
       },
     ),
 
