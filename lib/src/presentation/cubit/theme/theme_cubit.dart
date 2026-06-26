@@ -7,36 +7,37 @@ part 'theme_state.dart';
 class ThemeCubit extends Cubit<ThemeState> {
   static const String _themeKey = 'is_dark_theme';
 
-  ThemeCubit() : super(ThemeLight()) {
+  ThemeCubit() : super(ThemeSystem()) {
     _loadTheme();
   }
 
   Future<void> _loadTheme() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final isDark = prefs.getBool(_themeKey) ?? false;
+      final isDark = prefs.getBool(_themeKey);
+      if (isDark == null) {
+        emit(ThemeSystem());
+      } else if (isDark) {
+        emit(ThemeDark());
+      } else {
+        emit(ThemeLight());
+      }
+    } catch (_) {
+      emit(ThemeSystem());
+    }
+  }
+
+  Future<void> changeTheme(bool isDark) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_themeKey, isDark);
       if (isDark) {
         emit(ThemeDark());
       } else {
         emit(ThemeLight());
       }
     } catch (_) {
-      emit(ThemeLight());
-    }
-  }
-
-  Future<void> changeTheme() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (state is ThemeLight) {
-        await prefs.setBool(_themeKey, true);
-        emit(ThemeDark());
-      } else {
-        await prefs.setBool(_themeKey, false);
-        emit(ThemeLight());
-      }
-    } catch (_) {
-      if (state is ThemeLight) {
+      if (isDark) {
         emit(ThemeDark());
       } else {
         emit(ThemeLight());

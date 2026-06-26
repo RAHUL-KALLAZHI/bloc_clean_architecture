@@ -92,7 +92,7 @@ class _SplashScreenState extends State<SplashScreen>
             context.replaceNamed(AppRoutes.DASHBOARD_ROUTE_NAME);
           },
           isFirstTime: (_) {
-            context.replaceNamed(AppRoutes.LOGIN_ROUTE_NAME);
+            context.replaceNamed(AppRoutes.ONBOARDING_ROUTE_NAME);
           },
           unauthenticated: (_) {
             context.replaceNamed(AppRoutes.LOGIN_ROUTE_NAME);

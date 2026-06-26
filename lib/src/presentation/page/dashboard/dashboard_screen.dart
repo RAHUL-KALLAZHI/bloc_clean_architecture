@@ -530,14 +530,17 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                 ),
                 BlocBuilder<ThemeCubit, ThemeState>(
                   builder: (context, themeState) {
-                    final isDark = themeState is ThemeDark;
+                    final isDark = themeState is ThemeDark ||
+                        (themeState is ThemeSystem &&
+                            MediaQuery.platformBrightnessOf(context) ==
+                                Brightness.dark);
                     return SwitchListTile(
                       title: const Text('Dark Mode'),
                       secondary:
                           Icon(isDark ? Icons.dark_mode : Icons.light_mode),
                       value: isDark,
-                      onChanged: (_) {
-                        context.read<ThemeCubit>().changeTheme();
+                      onChanged: (value) {
+                        context.read<ThemeCubit>().changeTheme(value);
                       },
                     );
                   },

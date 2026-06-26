@@ -52,13 +52,20 @@ class MyApp extends StatelessWidget {
       ],
       child: BlocBuilder<ThemeCubit, ThemeState>(
         builder: (context, themeState) {
-          final isDark = themeState is ThemeDark;
+          final ThemeMode themeMode;
+          if (themeState is ThemeDark) {
+            themeMode = ThemeMode.dark;
+          } else if (themeState is ThemeLight) {
+            themeMode = ThemeMode.light;
+          } else {
+            themeMode = ThemeMode.system;
+          }
           return MaterialApp.router(
             debugShowCheckedModeBanner: false,
             title: 'flutter bloc clean architecture',
             theme: themeLight(context),
             darkTheme: themeDark(context),
-            themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+            themeMode: themeMode,
             routerConfig: routerinit,
           );
         },
