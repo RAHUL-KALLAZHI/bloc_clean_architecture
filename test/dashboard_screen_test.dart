@@ -197,6 +197,8 @@ void main() {
         email: 'career@aabasoft.com',
         jobUrl: 'https://aabasoft.com',
         lastUpdated: 1782126607,
+        postedDate: '15-05-2026',
+        lastDateToApply: '03 Jul 2026',
       ),
     ];
 
@@ -235,6 +237,23 @@ void main() {
     // Assert - Shows the job list and the back button
     expect(find.text('Software Testing'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    
+    // Assert - New metadata fields on job card
+    expect(find.text('Posted: 15-05-2026'), findsOneWidget);
+    expect(find.text('Apply by: 03 Jul 2026'), findsOneWidget);
+
+    // Act - Tap on the job card to open details bottom sheet
+    await tester.tap(find.text('Software Testing'));
+    await tester.pumpAndSettle();
+
+    // Assert - New metadata fields in bottom sheet
+    expect(find.text('Published: 15-05-2026'), findsOneWidget);
+    expect(find.text('Apply by: 03 Jul 2026'), findsWidgets); // Can be on card & sheet
+
+    // Act - Close bottom sheet (tap barrier or drag down, or just navigate back via back button if sheet is popped first)
+    // We can simulate popping the sheet
+    Navigator.of(tester.element(find.text('Published: 15-05-2026'))).pop();
+    await tester.pumpAndSettle();
 
     // Act - Tap the back button
     await tester.tap(find.byIcon(Icons.arrow_back));

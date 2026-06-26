@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockGetCompanies extends Mock implements GetCompanies {}
+
 class MockGetJobs extends Mock implements GetJobs {}
 
 void main() {
@@ -66,13 +67,53 @@ void main() {
     expect(dashboardBloc.state, equals(DashboardState.initial()));
   });
 
+  group('Job.fromJson', () {
+    test('should parse postedDate and lastDateToApply correctly', () {
+      final json = {
+        'companyId': '101',
+        'title': 'Developer',
+        'description': 'Write code',
+        'email': 'dev@test.com',
+        'jobUrl': 'http://test.com',
+        'lastUpdated': 123456,
+        'postedDate': '15-05-2026',
+        'lastDateToApply': '03 Jul 2026',
+      };
+
+      final job = Job.fromJson('101_1', json);
+
+      expect(job.id, '101_1');
+      expect(job.companyId, '101');
+      expect(job.title, 'Developer');
+      expect(job.postedDate, '15-05-2026');
+      expect(job.lastDateToApply, '03 Jul 2026');
+    });
+
+    test(
+        'should handle null values for postedDate and lastDateToApply gracefully',
+        () {
+      final json = {
+        'companyId': '101',
+        'title': 'Developer',
+        'description': 'Write code',
+        'email': 'dev@test.com',
+        'jobUrl': 'http://test.com',
+        'lastUpdated': 123456,
+      };
+
+      final job = Job.fromJson('101_1', json);
+
+      expect(job.postedDate, isNull);
+      expect(job.lastDateToApply, isNull);
+    });
+  });
+
   blocTest<DashboardBloc, DashboardState>(
     'emits [Loading, Loaded] when fetchData event is added successfully',
     build: () {
       when(() => mockGetCompanies.execute())
           .thenAnswer((_) async => Right(tCompanies));
-      when(() => mockGetJobs.execute())
-          .thenAnswer((_) async => Right(tJobs));
+      when(() => mockGetJobs.execute()).thenAnswer((_) async => Right(tJobs));
       return dashboardBloc;
     },
     act: (bloc) => bloc.add(const DashboardEvent.fetchData()),
@@ -95,8 +136,7 @@ void main() {
     build: () {
       when(() => mockGetCompanies.execute())
           .thenAnswer((_) async => const Left(ServerFailure('Firebase Error')));
-      when(() => mockGetJobs.execute())
-          .thenAnswer((_) async => Right(tJobs));
+      when(() => mockGetJobs.execute()).thenAnswer((_) async => Right(tJobs));
       return dashboardBloc;
     },
     act: (bloc) => bloc.add(const DashboardEvent.fetchData()),
@@ -115,8 +155,8 @@ void main() {
     build: () {
       when(() => mockGetCompanies.execute())
           .thenAnswer((_) async => Right(tCompanies));
-      when(() => mockGetJobs.execute())
-          .thenAnswer((_) async => const Left(ServerFailure('Connection Error')));
+      when(() => mockGetJobs.execute()).thenAnswer(
+          (_) async => const Left(ServerFailure('Connection Error')));
       return dashboardBloc;
     },
     act: (bloc) => bloc.add(const DashboardEvent.fetchData()),

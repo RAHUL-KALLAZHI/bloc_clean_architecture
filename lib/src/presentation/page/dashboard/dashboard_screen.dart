@@ -99,6 +99,80 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                   'Updated on ${_formatTimestamp(job.lastUpdated)}',
                   style: theme.textTheme.titleSmall,
                 ),
+                if ((job.postedDate != null && job.postedDate!.isNotEmpty) ||
+                    (job.lastDateToApply != null &&
+                        job.lastDateToApply!.isNotEmpty)) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: [
+                      if (job.postedDate != null && job.postedDate!.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: theme.primaryColor.withOpacity(0.15),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                size: 14,
+                                color: theme.primaryColor,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Published: ${job.postedDate}',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: theme.primaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (job.lastDateToApply != null &&
+                          job.lastDateToApply!.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.error.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: theme.colorScheme.error.withOpacity(0.15),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.hourglass_empty_outlined,
+                                size: 14,
+                                color: theme.colorScheme.error,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Apply by: ${job.lastDateToApply}',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: theme.colorScheme.error,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
                 const Divider(height: 30),
                 Text(
                   'Job Description',
@@ -230,9 +304,10 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
         children: [
           CircleAvatar(
             radius: 35,
-            backgroundColor: (company.logoUrl != null && company.logoUrl!.isNotEmpty)
-                ? Colors.white
-                : theme.primaryColor,
+            backgroundColor:
+                (company.logoUrl != null && company.logoUrl!.isNotEmpty)
+                    ? Colors.white
+                    : theme.primaryColor,
             child: (company.logoUrl != null && company.logoUrl!.isNotEmpty)
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(35),
@@ -703,6 +778,63 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                        if ((job.postedDate != null &&
+                                job.postedDate!.isNotEmpty) ||
+                            (job.lastDateToApply != null &&
+                                job.lastDateToApply!.isNotEmpty)) ...[
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 4,
+                            children: [
+                              if (job.postedDate != null &&
+                                  job.postedDate!.isNotEmpty)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.calendar_today_outlined,
+                                      size: 12,
+                                      color: theme.hintColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Posted: ${job.postedDate}',
+                                      style: theme.textTheme.headlineSmall
+                                          ?.copyWith(
+                                        color: theme.hintColor,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              if (job.lastDateToApply != null &&
+                                  job.lastDateToApply!.isNotEmpty)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.hourglass_empty_outlined,
+                                      size: 12,
+                                      color: theme.colorScheme.error
+                                          .withOpacity(0.8),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Apply by: ${job.lastDateToApply}',
+                                      style: theme.textTheme.headlineSmall
+                                          ?.copyWith(
+                                        color: theme.colorScheme.error
+                                            .withOpacity(0.8),
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -795,9 +927,10 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
             children: [
               CircleAvatar(
                 radius: 25,
-                backgroundColor: (company.logoUrl != null && company.logoUrl!.isNotEmpty)
-                    ? Colors.white
-                    : theme.primaryColor,
+                backgroundColor:
+                    (company.logoUrl != null && company.logoUrl!.isNotEmpty)
+                        ? Colors.white
+                        : theme.primaryColor,
                 child: (company.logoUrl != null && company.logoUrl!.isNotEmpty)
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(25),
@@ -807,7 +940,8 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                             imageUrl: company.logoUrl!,
                             fit: BoxFit.contain,
                             placeholder: (context, url) => const Center(
-                              child: CircularProgressIndicator(strokeWidth: 1.5),
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 1.5),
                             ),
                             errorWidget: (context, url, error) => Text(
                               initials,
